@@ -35,6 +35,7 @@
         #progressContainer { width: 90%; max-width: 400px; margin: 15px auto; display: none; }
         progress { width: 100%; height: 12px; border-radius: 5px; }
         #progressText { font-size: 12px; margin-top: 3px; }
+        .error-box { color: red; margin-bottom: 15px; text-align: left; display: inline-block; max-width: 90%; }
         @media (max-width: 480px) {
             #dropArea { padding: 15px; font-size: 14px; }
             button { width: 80%; font-size: 13px; }
@@ -44,6 +45,17 @@
 <body>
 
 <h2>Excel → CSV Converter</h2>
+
+{% if errors %}
+<div class="error-box">
+    <strong>Errors found in Excel file:</strong>
+    <ul>
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 
 <div id="dropArea">Drag & drop Excel files here or click to select</div>
 <input type="file" id="files" name="files" multiple>
@@ -93,8 +105,16 @@ convertBtn.addEventListener('click', () => {
         formData.append('file', files[i]);
 
         fetch('/', { method: 'POST', body: formData })
-            .then(response => response.blob())
+            .then(response => {
+                if (!response.ok) {
+                    alert('Error processing ' + files[i].name);
+                    return null;
+                }
+                return response.blob();
+            })
             .then(blob => {
+                if (!blob) return;
+
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -107,6 +127,9 @@ convertBtn.addEventListener('click', () => {
                 const percent = Math.round((uploaded / files.length) * 100);
                 progressBar.value = percent;
                 progressText.innerText = percent + '%';
+            })
+            .catch(err => {
+                alert('Error uploading ' + files[i].name + ': ' + err);
             });
     }
 });
